@@ -8,7 +8,7 @@
 
 #### 运行你的 clash
 
-####　编辑 clash-auto-switch.sh 文件
+#### 编辑 clash-auto-switch.sh 文件
 
 ```bash
 # 对应clash的external-controller，不要使用/结尾
