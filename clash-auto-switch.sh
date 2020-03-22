@@ -2,8 +2,10 @@
 api="http://127.0.0.1:9090"
 token=
 lockfilepath="/tmp/clash-check.lock"
-firstProxy="日本"
-secondProxy="IPLC"
+#节点名称必须匹配[日本]和[3.0|1.0]两个关键词
+firstProxy=("日本" "3.0|1.0")
+#节点名称只需匹配[IPLC]和[5.0]其中一个关键词
+secondProxy=("IPLC|5.0")
 
 info(){
 	# logger -s "$1" -t "clash-check-proxy" -p 6
@@ -17,7 +19,6 @@ lock(){
 unlock(){
 	rm $lockfilepath
 }
-
 if [ -e $lockfilepath ];then
 	exit 0
 fi
@@ -44,13 +45,25 @@ setProxy(){
 getNowProxy(){
 	echo `echo $1 | jq -r ".Proxy.now"`
 }
+match(){
+	local arr="$1"
+	local result="$2"
+	for item in ${arr[*]};do
+		result=`echo $result | jq | grep -E "$item"`
+		result=`echo $result | sed s'/,$//'`
+		result="[$result]"
+	done
+	echo $result
+}
 isFirst(){
-	local has=`echo "$1" | grep -c "$firstProxy"`
-	if [ "$has" -eq 1 ];then
-		return 0
-	else
-		return 1
-	fi
+	local has
+	for item in ${firstProxy[*]};do
+		has=`echo $1 | grep -c "$item"`
+		if [ "$has" -ne 1 ];then
+			return 1
+		fi	
+	done
+	return 0
 }
 findProxyAndSet(){
 	local minDelay=9999
@@ -59,7 +72,7 @@ findProxyAndSet(){
 	count=$(($count-1))
 	for i in `seq $count -1 1`  
 	do
-   		local name=`echo $1 | jq -c -r ".[$i]"`
+   	local name=`echo $1 | jq -c -r ".[$i]"`
 		local encodename=`urlencode "$name"`
 		local delay=`ping "$name"`
 		if [ "$delay" != "null" ];then
@@ -77,6 +90,7 @@ findProxyAndSet(){
 	fi
 }
 
+
 proxies=`gcurl /proxies | jq -r ".proxies"`
 nowProxy=`getNowProxy "$proxies"`
 nowdelay=`ping "$nowProxy"`
@@ -89,25 +103,25 @@ if [ 0 -eq $? ];then
 		info "当前代理不可用"
 	fi
 else
-	info "当前为非[$firstProxy]代理"
+	info "当前为非[${firstProxy[*]}]代理"
 fi
 
-fProxy=`echo $proxies | jq -r ".Proxy.all" | grep -E "$firstProxy"`
-fProxy=`echo $fProxy | sed s'/.$//'`
-fProxy="[$fProxy]"
+fProxy=`echo $proxies | jq -r ".Proxy.all"`
+fProxy=`match "${firstProxy[*]}" "$fProxy"`
+
 findProxyAndSet "$fProxy"
 if [ 0 -ne "$?" ];then
-	info "无可用[$firstProxy]线路"
-	sProxy=`echo $proxies | jq -r ".Proxy.all" | grep -E "$secondProxy"`
-	sProxy=`echo $sProxy | sed s'/.$//'`
-	sProxy="[$sProxy]"
+	info "无可用[${firstProxy[*]}]线路"
+	sProxy=`echo $proxies | jq -r ".Proxy.all"`
+	sProxy=`match "${secondProxy[*]}" "$sProxy"`
 	findProxyAndSet "$sProxy"
 	if [ 0 -eq "$?" ];then
-		local newProxies=`gcurl /proxies | jq -r ".proxies"`
-		local newNow=`getNowProxy "$newProxies"`
-		info "无可用[$firstProxy]线路,切换到：$newNow"
+		newProxies=`gcurl /proxies | jq -r ".proxies"`
+		newNow=`getNowProxy "$newProxies"`
+		info "无可用[${firstProxy[*]}]线路,切换到：$newNow"
 	else
-		info "无可用[$firstProxy]线路和[$secondProxy]线路"
+		info "无可用[${firstProxy[*]}]线路和[${secondProxy[*]}]线路"
 	fi
 fi
 unlock
+
