@@ -2,16 +2,27 @@
 api="http://127.0.0.1:9090"
 token=
 lockfilepath="/tmp/clash-check.lock"
-#节点名称必须匹配[日本]和[3.0|1.0]两个关键词
+
+#代理选择器的项名，脚本只会检查这一项并切换
+#clash的config.yaml里面Proxy Group项的name
+#只能是英文，如果有中文请先使用sed命令替换
+#cat ./config.yaml | sed 's/国外流量/proxy/' > ./config.yaml
+selectorName="proxy"
+
+# 优先选择的节点名称，此处为一个匹配关键词
 firstProxy=("日本" "3.0|1.0")
-#节点名称只需匹配[IPLC]和[5.0]其中一个关键词
+
+# 次级选择节点的关键词，当首选关键词没有匹配到节点或所有节点不可用时，会使用该关键词再次匹配选择
 secondProxy=("IPLC|5.0")
 
+#firstProxy和secondProxy的语法规则
+# 使用|符号,只需匹配[IPLC]和[5.0]其中一个关键词
+# 使用空格，则同时匹配[日本]和[3.0|1.0]两个关键词的节点，然后进行延迟测试，然后选择延迟最低的节点
+
 info(){
-	# logger -s "$1" -t "clash-check-proxy" -p 6
+	#logger -s "$1" -t "clash-check-proxy" -p 6
 	echo $1
 }
-
 
 lock(){
 	echo "" > $lockfilepath
@@ -40,10 +51,10 @@ gcurl(){
 
 setProxy(){
 	info "set proxy: $1"
-	curl --noproxy "*" -s -H "Authorization: Bearer $token" -X PUT  "$api/proxies/Proxy" -d "{\"name\":\"$1\"}"
+	curl --noproxy "*" -s -H "Authorization: Bearer $token" -X PUT  "$api/proxies/$selectorName" -d "{\"name\":\"$1\"}"
 }
 getNowProxy(){
-	echo `echo $1 | jq -r ".Proxy.now"`
+	echo `echo $1 | jq -r ".$selectorName.now"`
 }
 match(){
 	local arr="$1"
@@ -106,13 +117,24 @@ else
 	info "当前为非[${firstProxy[*]}]代理"
 fi
 
-fProxy=`echo $proxies | jq -r ".Proxy.all"`
+fProxy=`echo $proxies | jq -r ".$selectorName.all"`
 fProxy=`match "${firstProxy[*]}" "$fProxy"`
 
 findProxyAndSet "$fProxy"
 if [ 0 -ne "$?" ];then
 	info "无可用[${firstProxy[*]}]线路"
-	sProxy=`echo $proxies | jq -r ".Proxy.all"`
+	
+	isFirst "$nowProxy"
+	if [ 0 -ne $? ];then
+		# 当前已经是次选代理
+		if [ "null" != "$nowdelay" ];then
+			unlock
+			exit 0
+		fi
+	fi
+
+	#搜索次选代理
+	sProxy=`echo $proxies | jq -r ".$selectorName.all"`
 	sProxy=`match "${secondProxy[*]}" "$sProxy"`
 	findProxyAndSet "$sProxy"
 	if [ 0 -eq "$?" ];then
@@ -124,4 +146,3 @@ if [ 0 -ne "$?" ];then
 	fi
 fi
 unlock
-

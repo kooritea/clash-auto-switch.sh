@@ -17,16 +17,25 @@ api="http://127.0.0.1:9090"
 # 对应clash的secret
 token=
 
+#代理选择器的项名，脚本只会检查这一项并切换
+#clash的config.yaml里面Proxy Group项的name
+#只能是英文，如果有中文请先使用sed命令替换
+#cat ./config.yaml | sed 's/国外流量/proxy/' > ./config.yaml
+selectorName="proxy"
+
 # 用于防止多个脚本同时执行，不理解使用默认路径即可
 lockfilepath="/tmp/clash-check.lock"
 
 # 优先选择的节点名称，此处为一个匹配关键词
-# 这里会选择所有name中同时匹配[日本]和[3.0|1.0]两个关键词的节点，然后进行延迟测试，然后选择延迟最低的节点
 firstProxy=("日本" "3.0|1.0")
 
 # 次级选择节点的关键词，当首选关键词没有匹配到节点或所有节点不可用时，会使用该关键词再次匹配选择
-# 使用|符号,只需匹配[IPLC]和[5.0]其中一个关键词
 secondProxy=("IPLC|5.0")
+
+#firstProxy和secondProxy的语法规则
+# 使用|符号,只需匹配[IPLC]和[5.0]其中一个关键词
+# 使用空格，则同时匹配[日本]和[3.0|1.0]两个关键词的节点，然后进行延迟测试，然后选择延迟最低的节点
+
 
 # 一些简单的提示的输出，$1是内容
 # 不会改默认即可
