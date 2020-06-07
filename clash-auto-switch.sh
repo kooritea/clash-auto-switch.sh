@@ -50,7 +50,7 @@ gcurl(){
 }
 
 setProxy(){
-	info "set proxy: $1"
+	info "set proxy: $1 [$2ms]"
 	curl --noproxy "*" -s -H "Authorization: Bearer $token" -X PUT  "$api/proxies/$selectorName" -d "{\"name\":\"$1\"}"
 }
 getNowProxy(){
@@ -94,7 +94,7 @@ findProxyAndSet(){
 		fi
 	done
 	if [ "$minName" != "null" ];then
-		setProxy "$minName"
+		setProxy "$minName" "$minDelay"
 		return 0
 	else
 		return 1
