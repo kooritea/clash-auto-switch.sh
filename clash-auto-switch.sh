@@ -35,8 +35,7 @@ if [ -e $lockfilepath ];then
 fi
 lock
 urlencode() {
-	local data=`jq -nr --arg v "$1" '$v|@uri'`
-	echo $data | sed "s/%5D/]/g" |  sed "s/%5B/[/g"
+	echo `jq -nr --arg v "$1" '$v|@uri'`
 }
 
 ping(){
