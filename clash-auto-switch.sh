@@ -2,6 +2,7 @@
 api="http://127.0.0.1:9090"
 token=
 lockfilepath="/tmp/clash-check.lock"
+recfilepath="/tmp/clash-check-notproxy.lock"
 
 #代理选择器的项名，脚本只会检查这一项并切换
 #clash的config.yaml里面Proxy Group项的name
@@ -23,6 +24,18 @@ info(){
 	#logger -s "$1" -t "clash-check-proxy" -p 6
 	echo $1
 }
+
+#无可用代理
+whenNotProxy(){
+
+}
+
+#无可用代理后恢复
+whenRecovery(){
+
+}
+
+
 
 lock(){
 	echo "" > $lockfilepath
@@ -51,6 +64,10 @@ gcurl(){
 setProxy(){
 	info "set proxy: $1 [$2ms]"
 	curl --noproxy "*" -s -H "Authorization: Bearer $token" -X PUT  "$api/proxies/$selectorName" -d "{\"name\":\"$1\"}"
+	if [ -e $recfilepath ];then
+		rm $recfilepath
+		whenRecovery
+	fi
 }
 getNowProxy(){
 	echo `echo $1 | jq -r ".$selectorName.now"`
@@ -142,6 +159,8 @@ if [ 0 -ne "$?" ];then
 		info "无可用[${firstProxy[*]}]线路,切换到：$newNow"
 	else
 		info "无可用[${firstProxy[*]}]线路和[${secondProxy[*]}]线路"
+		echo "" > $recfilepath
+		whenNotProxy
 	fi
 fi
 unlock
