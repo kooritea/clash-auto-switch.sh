@@ -8,7 +8,7 @@
 
 #### 运行你的 clash
 
-#### 编辑 clash-auto-switch.sh 文件
+#### 编辑 env 文件
 
 ```bash
 # 对应clash的external-controller，不要使用/结尾
@@ -25,16 +25,25 @@ selectorName="proxy"
 
 # 用于防止多个脚本同时执行，不理解使用默认路径即可
 lockfilepath="/tmp/clash-check.lock"
+#记录当前是否处于无可用代理状态，默认即可
+recfilepath="/tmp/clash-check-notproxy.lock"
 
-# 优先选择的节点名称，此处为一个匹配关键词
+# 优先选择的节点名称
 firstProxy=("日本" "3.0|1.0")
 
 # 次级选择节点的关键词，当首选关键词没有匹配到节点或所有节点不可用时，会使用该关键词再次匹配选择
 secondProxy=("IPLC|5.0")
 
 #firstProxy和secondProxy的语法规则
-# 使用|符号,只需匹配[IPLC]和[5.0]其中一个关键词
-# 使用空格，则同时匹配[日本]和[3.0|1.0]两个关键词的节点，然后进行延迟测试，然后选择延迟最低的节点
+# 使用|符号,如"A|B"只需匹配[A]和[B]其中一个关键词
+# 使用空格，如
+# secondProxy=("A" "B")
+# 则同时匹配[A]和[B]两个关键词的节点
+# 两种写法可以混合使用，如上面的firstProxy=("日本" "3.0|1.0")
+#则会查找所有包含"日本"且包含"3.0"和"1.0"这两个关键词任意一个的节点
+# 日本3.0 √
+# 日本1.0 √
+# 美国3.0 X
 
 
 # 一些简单的提示的输出，$1是内容
@@ -44,9 +53,30 @@ info(){
 	echo $1
 }
 
+#无可用代理
+whenNotProxy(){
+  info "无可用代理"
+}
+
+#无可用代理后恢复
+whenRecovery(){
+  info "代理已恢复，当前节点为:$1"
+}
+
 
 # ....
 ```
+
+#### 编辑 clash-auto-switch.sh 文件
+
+```bash
+#source ./env
+#将此句注释
+#改成env文件的绝对路径
+#例如
+source /etc/clash/env
+```
+
 
 #### 设置定时循环任务
 
