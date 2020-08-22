@@ -7,28 +7,24 @@ recfilepath="/tmp/clash-check-notproxy.lock"
 #clash的config.yaml里面Proxy Group项的name
 #只能是英文，如果有中文请先使用sed命令替换
 #cat ./config.yaml | sed 's/国外流量/proxy/' > ./config.yaml
-selectorName="proxy"
+selectorName="Proxy"
 
-# 优先选择的节点名称，此处为一个匹配关键词
-firstProxy=("日本" "3.0|1.0")
-
-# 次级选择节点的关键词，当首选关键词没有匹配到节点或所有节点不可用时，会使用该关键词再次匹配选择
-secondProxy=("IPLC|5.0")
-#firstProxy和secondProxy的语法规则
-# 使用|符号,只需匹配[IPLC]和[5.0]其中一个关键词
-# 使用空格，则同时匹配[日本]和[3.0|1.0]两个关键词的节点，然后进行延迟测试，然后选择延迟最低的节点
+# 选择节点的优先级，此处为内容项为正则表达式
+selectProxyRule=("专线.*日本" "日本" "新加坡|美国")
+#优先选择匹配到[专线.*日本]的节点
+#没找到再寻找[日本]节点，依次往下
 
 info(){
 	#logger -s "$1" -t "clash-check-proxy" -p 6
 	echo $1
 }
 
-#无可用代理
+#无可用代理时触发的方法
 whenNotProxy(){
   info "无可用代理"
 }
 
-#无可用代理后恢复
+#无可用代理后恢复触发的方法
 whenRecovery(){
   info "代理已恢复，当前节点为:$1"
 }
