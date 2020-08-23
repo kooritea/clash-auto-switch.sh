@@ -67,16 +67,6 @@ whenRecovery(){
 # ....
 ```
 
-#### 编辑 clash-auto-switch.sh 文件
-
-```bash
-#source ./env
-#将此句注释
-#改成env文件的绝对路径
-#例如
-source /etc/clash/env
-```
-
 
 #### 设置定时循环任务
 

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-source ./env
+basepath=$(cd `dirname $0`; pwd)
+source "$basepath/env"
 
 lock(){
 	echo "" > $lockfilepath
@@ -14,7 +15,7 @@ urlencode() {
 
 ping(){
 	local encodename=`urlencode "$1"`
-	local data=`gcurl "/proxies/$encodename/delay?timeout=5000&url=http:%2F%2Fwww.gstatic.com%2Fgenerate_204"`
+	local data=`gcurl "/proxies/$encodename/delay?timeout=2000&url=http:%2F%2Fwww.gstatic.com%2Fgenerate_204"`
 	local delay=`echo $data | jq -r ".delay"`
 	echo $delay
 }
@@ -104,7 +105,7 @@ for item in ${selectProxyRule[*]};do
 		nowdelay=`ping "$nowProxy"`
 		if [ "null" != "$nowdelay" ];then
 		# 当前已是次级代理且可用
-		info "当前已是次级代理[$item]且可用: [$nowProxy][$nowdelay]"
+		info "当前已是代理[$item]且可用: [$nowProxy][$nowdelay]"
 		unlock
 		exit 0
 		fi
