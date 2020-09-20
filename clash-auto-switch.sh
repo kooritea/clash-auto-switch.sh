@@ -58,12 +58,14 @@ findProxyAndSet(){
 	for i in `seq $count -1 1`  
 	do
    	local name=`echo $1 | jq -c -r ".[$i]"`
-		local encodename=`urlencode "$name"`
-		local delay=`ping "$name"`
-		if [ "$delay" != "null" ];then
-			if [ "$minDelay" -gt "$delay" ];then
-				minDelay=$delay
-				minName=$name
+		if [ "$2" != "$name" ];then
+			local encodename=`urlencode "$name"`
+			local delay=`ping "$name"`
+			if [ "$delay" != "null" ];then
+				if [ "$minDelay" -gt "$delay" ];then
+					minDelay=$delay
+					minName=$name
+				fi
 			fi
 		fi
 	done
@@ -82,7 +84,13 @@ lock
 
 proxies=`gcurl /proxies | jq -r ".proxies"`
 nowProxy=`getNowProxy "$proxies"`
+if [ "null" == "$nowProxy" ];then
+	info "无法获取当前节点信息，请检查env文件的selectorName属性"
+	unlock
+	exit 0
+fi
 nowdelay=`ping "$nowProxy"`
+nowProxyIsError="0"
 testProxyName "$nowProxy" ${selectProxyRule[0]}
 
 if [ 0 -eq $? ];then
@@ -91,6 +99,7 @@ if [ 0 -eq $? ];then
 		exit 0
 	else
 		info "当前代理[$nowProxy]不可用"
+		nowProxyIsError="1"
 	fi
 else
 	info "当前为非[${selectProxyRule[0]}]代理: [$nowProxy][$nowdelay]"
@@ -100,19 +109,21 @@ Proxys=`echo $proxies | jq -r ".$selectorName.all"`
 
 for item in ${selectProxyRule[*]};do
 
-	testProxyName "$nowProxy" "$item"
-	if [ 0 -eq $? ];then
-		nowdelay=`ping "$nowProxy"`
-		if [ "null" != "$nowdelay" ];then
-		# 当前已是次级代理且可用
-		info "当前已是代理[$item]且可用: [$nowProxy][$nowdelay]"
-		unlock
-		exit 0
+	if [ "1" != "$nowProxyIsError" ];then
+		testProxyName "$nowProxy" "$item"
+		if [ 0 -eq $? ];then
+			nowdelay=`ping "$nowProxy"`
+			if [ "null" != "$nowdelay" ];then
+			# 当前已是次级代理且可用
+			info "当前已是代理[$item]且可用: [$nowProxy][$nowdelay]"
+			unlock
+			exit 0
+			fi
 		fi
 	fi
+	
 	matchProxys=`match "$item" "$Proxys"`
-	echo "$matchProxys"
-	findProxyAndSet "$matchProxys"
+	findProxyAndSet "$matchProxys" "$nowProxy"
 	if [ 0 -eq "$?" ];then
 		if [ -e $recfilepath ];then
 			rm $recfilepath
