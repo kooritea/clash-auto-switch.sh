@@ -17,7 +17,7 @@ ping(){
 	local encodename=`urlencode "$1"`
 	local data=`gcurl "/proxies/$encodename/delay?timeout=2000&url=http:%2F%2Fwww.gstatic.com%2Fgenerate_204"`
 	local delay=`echo $data | jq -r ".delay"`
-	echo $delay
+    echo $delay
 }
 gcurl(){
 	echo `curl --noproxy "*" -s -H "Authorization: Bearer $token"  "${api}${1}"`
@@ -25,10 +25,13 @@ gcurl(){
 
 setProxy(){
 	info "set proxy: $1 [$2ms]"
-	curl --noproxy "*" -s -H "Authorization: Bearer $token" -X PUT  "$api/proxies/$selectorName" -d "{\"name\":\"$1\"}"
+	local encodename=`urlencode "${selectorName}"`
+    local turl="$api/proxies/${encodename}"
+    local tdata="{\"name\":\"$1\"}"
+	curl --noproxy "*" -s -H "Authorization: Bearer $token" -H "Content-Type: application/json" -X PUT  $turl -d $tdata  
 }
 getNowProxy(){
-	echo `echo $1 | jq -r ".$selectorName.now"`
+	echo `echo $1 | jq -r ".\"${selectorName}\".now"`
 }
 match(){
 	local arr="$1"
@@ -105,7 +108,7 @@ else
 	info "当前为非[${selectProxyRule[0]}]代理: [$nowProxy][$nowdelay]"
 fi
 
-Proxys=`echo $proxies | jq -r ".$selectorName.all"`
+Proxys=`echo $proxies | jq -r ".\"${selectorName}\".all"`
 
 for item in ${selectProxyRule[*]};do
 
